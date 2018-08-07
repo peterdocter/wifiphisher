@@ -6,10 +6,19 @@ This module tries to install all the required software.
 from __future__ import print_function
 import sys
 import os
-from distutils.spawn import find_executable
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Command
 import wifiphisher.common.constants as constants
 
+
+class CleanCommand(Command):
+    """Custom clean command to tidy up the project root."""
+    user_options = []
+    def initialize_options(self):
+        pass
+    def finalize_options(self):
+        pass
+    def run(self):
+        os.system('rm -vrf ./build ./dist ./*.pyc ./*.tgz ./*.egg-info')
 
 def get_dnsmasq():
     """
@@ -48,44 +57,6 @@ def get_dnsmasq():
 
         sys.exit(dnsmasq_message)
 
-
-def get_hostapd():
-    """
-    Try to install hostapd on host system if not present
-
-    :return: None
-    :rtype: None
-    """
-
-    if not os.path.isfile("/usr/sbin/hostapd"):
-        install = raw_input(("[" + constants.T + "*" + constants.W + "] hostapd not found in " +
-                             "/usr/sbin/hostapd, install now? [y/n] "))
-
-        if install == "y":
-            if os.path.isfile("/usr/bin/pacman"):
-                os.system("pacman -S hostapd")
-            elif os.path.isfile("/usr/bin/yum"):
-                os.system("yum install hostapd")
-            else:
-                os.system("apt-get -y install hostapd")
-        else:
-            sys.exit(("[" + constants.R + "-" + constants.W + "] hostapd not found in " +
-                      "/usr/sbin/hostapd"))
-
-    if not os.path.isfile("/usr/sbin/hostapd"):
-        hostapd_message = ("\n[" + constants.R + "-" + constants.W + "] Unable to install the " +
-                           "\'hostapd\' package!\n[" + constants.T + "*" + constants.W + "] " +
-                           "This process requires a persistent internet connection!\nPlease " +
-                           "follow the link below to configure your sources.list\n" + constants.B +
-                           "http://docs.kali.org/general-use/kali-linux-sources-list-" +
-                           "repositories\n" + constants.W + "[" + constants.G + "+" + constants.W +
-                           "] Run apt-get update for changes to take effect.\n[" + constants.G +
-                           "+" + constants.W + "] Rerun the script to install hostapd.\n[" +
-                           constants.R + "!" + constants.W + "] Closing")
-
-        sys.exit(hostapd_message)
-
-
 # setup settings
 NAME = "wifiphisher"
 AUTHOR = "sophron"
@@ -96,7 +67,7 @@ LICENSE = "GPL"
 KEYWORDS = ["wifiphisher", "evil", "twin", "phishing"]
 PACKAGES = find_packages(exclude=["docs", "tests"])
 INCLUDE_PACKAGE_DATA = True
-VERSION = "1.3"
+VERSION = "1.4"
 CLASSIFIERS = ["Development Status :: 5 - Production/Stable",
                "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
                "Natural Language :: English", "Operating System :: Unix",
@@ -106,17 +77,17 @@ CLASSIFIERS = ["Development Status :: 5 - Production/Stable",
                "Intended Audience :: System Administrators",
                "Intended Audience :: Information Technology"]
 ENTRY_POINTS = {"console_scripts": ["wifiphisher = wifiphisher.pywifiphisher:run"]}
-INSTALL_REQUIRES = ["PyRIC", "tornado", "blessings>=1.6"]
-
+# WORKAROUND: Download tornado 4.5.3 instead of latest so travis won't complain
+INSTALL_REQUIRES = ["PyRIC", "tornado==4.5.3",
+                    "pbkdf2", "roguehostapd", "scapy"]
+CMDCLASS = {"clean": CleanCommand,}
 
 # run setup
 setup(name=NAME, author=AUTHOR, author_email=AUTHOR_EMAIL, description=DESCRIPTION,
       license=LICENSE, keywords=KEYWORDS, packages=PACKAGES,
       include_package_data=INCLUDE_PACKAGE_DATA, version=VERSION, entry_points=ENTRY_POINTS,
-      install_requires=INSTALL_REQUIRES, classifiers=CLASSIFIERS, url=URL)
+      install_requires=INSTALL_REQUIRES, classifiers=CLASSIFIERS, url=URL, cmdclass=CMDCLASS)
 
-# Get hostapd or dnsmasq if needed
-get_hostapd()
 get_dnsmasq()
 
 print()
